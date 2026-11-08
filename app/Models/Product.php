@@ -34,6 +34,7 @@ class Product extends Model
     {
         return [
             'price_minor' => 'integer',
+            'lock_version' => 'integer',
         ];
     }
 

@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-CshozKDb.css",
+    "file": "assets/app-wEyQuG-n.css",
     "name": "app",
     "names": [
       "app.css"
@@ -8,13 +8,45 @@
     "src": "resources/css/app.css",
     "isEntry": true
   },
+  "resources/js/Pages/Admin/Products/Form.vue": {
+    "file": "assets/Form-Jduy9x-j.js",
+    "name": "Form",
+    "src": "resources/js/Pages/Admin/Products/Form.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.ts"
+    ]
+  },
+  "resources/js/Pages/Admin/Products/Index.vue": {
+    "file": "assets/Index-CDYV-2ou.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Admin/Products/Index.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.ts"
+    ]
+  },
+  "resources/js/Pages/Auth/Login.vue": {
+    "file": "assets/Login-BeLec_L2.js",
+    "name": "Login",
+    "src": "resources/js/Pages/Auth/Login.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.ts"
+    ]
+  },
   "resources/js/app.ts": {
-    "file": "assets/app-D4kdodLX.js",
+    "file": "assets/app-DFGy-R7z.js",
     "name": "app",
     "src": "resources/js/app.ts",
     "isEntry": true,
+    "dynamicImports": [
+      "resources/js/Pages/Admin/Products/Form.vue",
+      "resources/js/Pages/Admin/Products/Index.vue",
+      "resources/js/Pages/Auth/Login.vue"
+    ],
     "css": [
-      "assets/app-CshozKDb.css"
+      "assets/app-wEyQuG-n.css"
     ]
   }
 }

@@ -37,7 +37,10 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            //
+            'locale' => app()->getLocale(),
+            'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
+            'appName' => config('app.name'),
+            'flash' => ['success' => fn () => $request->session()->get('success')],
         ];
     }
 }

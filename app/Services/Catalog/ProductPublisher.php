@@ -4,30 +4,65 @@ namespace App\Services\Catalog;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Throwable;
 
 class ProductPublisher
 {
     public function __construct(private readonly PublicCatalogCache $catalogCache) {}
 
-    public function publish(Product $product): Product
+    public function publish(Product $product, int $expectedVersion): Product
     {
-        return DB::transaction(function () use ($product): Product {
+        return DB::transaction(function () use ($product, $expectedVersion): Product {
             $locked = Product::query()->lockForUpdate()->findOrFail($product->getKey());
+
+            if ((int) $locked->lock_version !== $expectedVersion) {
+                if ($locked->status === Product::STATUS_PUBLISHED) {
+                    return $locked;
+                }
+
+                throw new HttpException(409, 'This product changed since you opened it. Reload before publishing.');
+            }
+
+            if ($locked->status === Product::STATUS_PUBLISHED) {
+                return $locked;
+            }
+
             $this->assertPublishable($locked);
-            $locked->forceFill(['status' => Product::STATUS_PUBLISHED])->save();
-            $this->catalogCache->invalidate();
+            $locked->forceFill([
+                'status' => Product::STATUS_PUBLISHED,
+                'lock_version' => ((int) $locked->lock_version) + 1,
+            ])->save();
+            $this->invalidateAfterCommit();
 
             return $locked->refresh();
         }, attempts: 3);
     }
 
-    public function hide(Product $product): Product
+    public function hide(Product $product, int $expectedVersion): Product
     {
-        DB::transaction(function () use ($product): void {
+        DB::transaction(function () use ($product, $expectedVersion): void {
             $locked = Product::query()->lockForUpdate()->findOrFail($product->getKey());
-            $locked->forceFill(['status' => Product::STATUS_HIDDEN])->save();
-            $this->catalogCache->invalidate();
+
+            if ((int) $locked->lock_version !== $expectedVersion) {
+                if ($locked->status === Product::STATUS_HIDDEN) {
+                    return;
+                }
+
+                throw new HttpException(409, 'This product changed since you opened it. Reload before hiding.');
+            }
+
+            if ($locked->status === Product::STATUS_HIDDEN) {
+                return;
+            }
+
+            $locked->forceFill([
+                'status' => Product::STATUS_HIDDEN,
+                'lock_version' => ((int) $locked->lock_version) + 1,
+            ])->save();
+            $this->invalidateAfterCommit();
         }, attempts: 3);
 
         return $product->refresh();
@@ -76,6 +111,10 @@ class ProductPublisher
             $errors['images'] = 'At least one product image is required.';
         }
 
+        if ($images->count() > 10) {
+            $errors['images'] = 'A product can contain up to 10 images.';
+        }
+
         foreach ($images as $index => $image) {
             foreach (['alt_ar', 'alt_en'] as $field) {
                 if (! is_string($image->{$field}) || trim($image->{$field}) === '') {
@@ -91,5 +130,18 @@ class ProductPublisher
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }
+    }
+
+    private function invalidateAfterCommit(): void
+    {
+        DB::afterCommit(function (): void {
+            try {
+                $this->catalogCache->invalidate();
+            } catch (Throwable $exception) {
+                Log::error('Product cache invalidation failed after a committed state change.', [
+                    'exception' => $exception::class,
+                ]);
+            }
+        });
     }
 }

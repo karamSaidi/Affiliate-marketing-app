@@ -38,6 +38,8 @@ class ProductEventRecorder
             Log::error('Product event could not be recorded.', [
                 'product_id' => $productId,
                 'event_type' => $type,
+                'route' => request()->route()?->getName(),
+                'request_id' => request()->attributes->get('request_id'),
                 'exception' => $exception::class,
             ]);
 
